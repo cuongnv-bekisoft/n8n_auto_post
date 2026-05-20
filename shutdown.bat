@@ -1,0 +1,1 @@
+start node D:\n8n-app\shutdown-server.js

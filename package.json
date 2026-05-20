@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "n8n": "^2.8.4",
+    "puppeteer": "^19.11.1"
+  },
+  "name": "n8n-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "api-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
