@@ -1,0 +1,448 @@
+{
+  "name": "My workflow normal",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "7a92002a-a556-403e-a8d9-0d25ce0a6c6b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "listId": "5eb7bd3ece6fb268463275ab",
+        "name": "={{ $('get_title').item.json.title_short }}",
+        "description": "={{ $('get_title').item.json.techrum_url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        0
+      ],
+      "id": "5630c527-8a03-42df-999b-4fafe0c35eed",
+      "name": "Create a card",
+      "credentials": {
+        "trelloApi": {
+          "id": "3XuMzM0VwTAlfQhA",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://techrum.cuongnv.workers.dev/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "workersai"
+            },
+            {
+              "name": "model",
+              "value": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.link }}\",\n  \"title\": \"{{ $json.title }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "6e4d17c9-de6b-43a7-a552-37342db75f4b",
+      "name": "Convert"
+    },
+    {
+      "parameters": {
+        "url": "https://getnews.cuongnv.workers.dev/sources",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dbe35ee5-19c4-4346-b13a-3ab7f4baa4fc",
+      "name": "Get_sources"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sources = $input.all().map(item => item.json);\n\n// Loại nguồn có id 0 và 1\nconst filtered = sources.filter(s => s.id !== 0 && s.id !== 1);\n\nconst shuffled = [...filtered].sort(() => Math.random() - 0.5);\nconst selected = shuffled.slice(0, 4);\n\nreturn selected.map(source => ({ json: source }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "3b11982c-9ccd-4ee7-93b4-bc5b870e95cf",
+      "name": "Random_sources"
+    },
+    {
+      "parameters": {
+        "url": "https://getnews.cuongnv.workers.dev/saved",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "2305f927-9fcf-42ea-9347-5ded3f184702",
+      "name": "Save"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst article = data.articles[0];\n\nif (!article) {\n  return {\n    json: { skip: true }\n  };\n}\n\nreturn {\n  json: {\n    id: article.id,\n    title: article.title,\n    image: article.image,\n    link: article.link,\n    source: article.source,\n    created_at: article.created_at,\n    skip: false\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "e7d890e5-9cc5-4871-822f-e4f7ad99beda",
+      "name": "Extract"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/post",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "=={{ JSON.stringify({ title: $json.title_short || $json.title, bbcode: $json.data, forum_id: $json.forum_id }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        0
+      ],
+      "id": "eb65918d-6d89-4ea3-9aed-19e3f73e78a6",
+      "name": "post_web"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const techrumUrl = $json.url;\nconst titleShort = $('Convert').all()[0].json.title_short;\n\nreturn {\n  techrum_url: techrumUrl,\n  title_short: titleShort\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "fb55077b-2018-4a78-b76c-e13bc38f8472",
+      "name": "get_title"
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "42f64824-7d9e-4adf-8ed1-a765a5f6e410",
+      "name": "Wait",
+      "webhookId": "ecba405c-6e19-4dca-a94e-309ca5775bd3"
+    },
+    {
+      "parameters": {
+        "path": "start-workflow-1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f24a881c-f2dd-4b2e-9cfe-884bb84a7906",
+      "name": "Webhook",
+      "webhookId": "a9c7de9d-b75e-4b1a-8239-03e09178773f"
+    },
+    {
+      "parameters": {
+        "chatId": "7922880027",
+        "text": "✅ Đã đăng xong 4 bài lên Techrum (cách nhau 15 phút/bài)",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        -192
+      ],
+      "id": "dcec4f3d-3f28-40aa-a120-be5e069c9035",
+      "name": "Send a text message",
+      "webhookId": "1a786052-5006-4393-aa6f-5dc76615e9d9",
+      "credentials": {
+        "telegramApi": {
+          "id": "VudaawHskwkCrfaP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://getnews.cuongnv.workers.dev/saved/{{ $('Extract').item.json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2192,
+        0
+      ],
+      "id": "f778ec6c-8af3-4692-901f-38c5f7c85b21",
+      "name": "Delete_save"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "831217e4-24cf-4a73-bbe7-3975546b0a25",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "a9a33a99-bb65-4ef0-9513-5fa51c41a1a3",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a card": {
+      "main": [
+        [
+          {
+            "node": "Delete_save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert": {
+      "main": [
+        [
+          {
+            "node": "post_web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_sources": {
+      "main": [
+        [
+          {
+            "node": "Random_sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random_sources": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save": {
+      "main": [
+        [
+          {
+            "node": "Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post_web": {
+      "main": [
+        [
+          {
+            "node": "get_title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_title": {
+      "main": [
+        [
+          {
+            "node": "Create a card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get_sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_save": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d160b455-ad51-47c9-a738-2cf07c6131c9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "93f617569fc779da6d205b015e99c3cfbc827dbbef38a8fa0f42c4e26de2e09c"
+  },
+  "id": "QTlCGwKNJwJCPwAy",
+  "tags": []
+}

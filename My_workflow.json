@@ -1,0 +1,585 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "4ad6fd9b-6a55-4ed7-b5ed-32f0771322c7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "listId": "5eb7bd3ece6fb268463275ab",
+        "name": "={{ $('get_title').item.json.title_short }}",
+        "description": "={{ $('get_title').item.json.techrum_url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        0
+      ],
+      "id": "b2a051ef-6e70-49f8-9622-245b0696f4b3",
+      "name": "Create a card",
+      "credentials": {
+        "trelloApi": {
+          "id": "3XuMzM0VwTAlfQhA",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://techrum.cuongnv.workers.dev/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "workersai"
+            },
+            {
+              "name": "model",
+              "value": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.link }}\",\n  \"title\": \"{{ $json.title }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "62dad29d-4564-4c03-938c-6a562357235a",
+      "name": "Convert"
+    },
+    {
+      "parameters": {
+        "url": "https://getnews.cuongnv.workers.dev/sources",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0761f780-8687-47d9-a810-12c5131fbe03",
+      "name": "Get_sources"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sources = $input.all().map(item => item.json);\n\n// Loại nguồn có id 0 và 1\nconst filtered = sources.filter(s => s.id !== 0 && s.id !== 1);\n\nconst shuffled = [...filtered].sort(() => Math.random() - 0.5);\nconst selected = shuffled.slice(0, 4);\n\nreturn selected.map(source => ({ json: source }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9b7b126e-2232-4116-bca9-29b00a76c560",
+      "name": "Random_sources"
+    },
+    {
+      "parameters": {
+        "url": "https://getnews.cuongnv.workers.dev/saved",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "8a2eefce-b52f-44cc-82e2-fc428f3bbd5d",
+      "name": "Save"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst article = data.articles[0];\n\nif (!article) {\n  return {\n    json: { skip: true }\n  };\n}\n\nreturn {\n  json: {\n    id: article.id,\n    title: article.title,\n    image: article.image,\n    link: article.link,\n    source: article.source,\n    created_at: article.created_at,\n    skip: false\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "0f03763c-0844-4b6f-8613-4d841f186f88",
+      "name": "Extract"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/post",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "=={{ JSON.stringify({ title: $json.title_short || $json.title, bbcode: $json.data, forum_id: $json.forum_id }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1888,
+        0
+      ],
+      "id": "4eb0af6c-c70d-4fac-98d5-4a65d6d91eba",
+      "name": "post_web"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const techrumUrl = $json.url;\nconst titleShort = $('Convert').all()[0].json.title_short;\n\nreturn {\n  techrum_url: techrumUrl,\n  title_short: titleShort\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        0
+      ],
+      "id": "5a204230-bf93-4896-b6e4-9105a5d69177",
+      "name": "get_title"
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3232,
+        0
+      ],
+      "id": "d03e9b19-555f-4d9e-86db-1b4eaff93b82",
+      "name": "Wait",
+      "webhookId": "86f4703f-ecbf-4a62-9331-df6517c92685"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "7922880027",
+        "message": "✅ Hệ thống đã xử lý xong 4 bài!\n\n📝 Đã đăng lên Techrum (cách nhau 15 phút/bài)\n📅 Lịch Facebook đã được xếp hàng\n\nBạn có muốn tắt máy không?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ Tắt máy",
+            "disapproveLabel": "❌ Không"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        -192
+      ],
+      "id": "4a6be292-e903-4bb8-8a48-57871c723342",
+      "name": "Send message and wait for response",
+      "webhookId": "556d0a3d-26b6-4bf5-a45a-168713a1d25c",
+      "credentials": {
+        "telegramApi": {
+          "id": "VudaawHskwkCrfaP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3001/shutdown",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        -192
+      ],
+      "id": "53a60f0c-6da7-4818-bcad-8dde9b47c5de",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fb-auto-poster.cuongnv.workers.dev/schedule",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "=={{ JSON.stringify({\n  caption: $('get_title').item.json.title_short,\n  image_url: $('Extract_URL').item.json.image_url,\n  link: $('post_web').item.json.url,\n  scheduled_time: $('Calc_time').item.json.scheduled_time,\n  page: \"0\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3040,
+        0
+      ],
+      "id": "384bdc4c-6049-43fc-81fe-9ba5e9130118",
+      "name": "Schedule_FB"
+    },
+    {
+      "parameters": {
+        "jsCode": "const loopIndex = $runIndex || 0;\n\nconst allJobs = $('Get_FB_jobs').first().json;\nconst pendingJobs = (allJobs.jobs || []).filter(j => j.status !== 'commented');\n\n// Tính ngày mai VN\nconst now = new Date();\nconst vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);\nconst tomorrowVN = new Date(vnNow);\ntomorrowVN.setUTCDate(tomorrowVN.getUTCDate() + 1);\ntomorrowVN.setUTCHours(0, 0, 0, 0);\n\n// Các slot 30 phút từ 9h30 đến 13h\nconst slots = [\n  { h: 9,  m: 30 },\n  { h: 10, m: 0  },\n  { h: 10, m: 30 },\n  { h: 11, m: 0  },\n  { h: 11, m: 30 },\n  { h: 12, m: 0  },\n  { h: 12, m: 30 },\n  { h: 13, m: 0  },\n];\n\nlet chosenSlot = null;\n\nfor (const slot of slots) {\n  const candidate = new Date(tomorrowVN);\n  candidate.setUTCHours(slot.h - 7, slot.m, 0, 0);\n  const candidateTs = Math.floor(candidate.getTime() / 1000);\n\n  // Check trùng trong vòng 20 phút\n  const conflict = pendingJobs.some(j =>\n    Math.abs(j.scheduled_ts - candidateTs) < 1200\n  );\n\n  if (!conflict) {\n    chosenSlot = slot;\n    break;\n  }\n}\n\n// Fallback nếu hết slot\nif (!chosenSlot) chosenSlot = slots[loopIndex % slots.length];\n\n// Build ISO string đúng giờ VN\nconst scheduled = new Date(tomorrowVN);\nscheduled.setUTCHours(chosenSlot.h - 7, chosenSlot.m, 0, 0);\n\nconst pad = n => String(n).padStart(2, '0');\nconst vnDate = new Date(scheduled.getTime() + 7 * 60 * 60 * 1000);\nconst isoTime = `${vnDate.getUTCFullYear()}-${pad(vnDate.getUTCMonth()+1)}-${pad(vnDate.getUTCDate())}T${pad(chosenSlot.h)}:${pad(chosenSlot.m)}:00+07:00`;\n\nreturn {\n  scheduled_time: isoTime,\n  loop_index: loopIndex,\n  chosen_hour: `${chosenSlot.h}:${pad(chosenSlot.m)}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2864,
+        0
+      ],
+      "id": "98b83f98-f6c6-4ee6-b836-9aa2189e83dd",
+      "name": "Calc_time"
+    },
+    {
+      "parameters": {
+        "path": "start-workflow",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        0
+      ],
+      "id": "17847662-7f5e-4b36-8a2a-34d2e355dc10",
+      "name": "Webhook1",
+      "webhookId": "80aca46c-ad73-40da-b5e4-1340bda6dd0c"
+    },
+    {
+      "parameters": {
+        "url": "https://fb-auto-poster.cuongnv.workers.dev/jobs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2688,
+        0
+      ],
+      "id": "f9a04ef5-dc90-4071-ad34-55f451db1f54",
+      "name": "Get_FB_jobs"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const bbcode = $json.data;\nconst match = bbcode.match(/\\[IMG\\](https?:\\/\\/[^\\[]+)\\[\\/IMG\\]/i);\nconst imageUrl = match ? match[1] : null;\n\nreturn {\n  data: $json.data,\n  title_short: $json.title_short,\n  highlights: $json.highlights,\n  image_url: imageUrl,\n  forum_id: $json.forum_id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "68c5b2e9-8bb8-4859-a1ff-97fa80008269",
+      "name": "Extract_URL"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "27e4e4d9-ccbb-42d2-9145-58b6f4220f7f",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        0
+      ],
+      "id": "4fffde6f-e668-4088-bba2-5aff016f81ec",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://getnews.cuongnv.workers.dev/saved/{{ $('Extract').item.json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2480,
+        0
+      ],
+      "id": "55d83bc8-81ae-4ab1-8f03-0f6503959325",
+      "name": "Delete_save"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a card": {
+      "main": [
+        [
+          {
+            "node": "Delete_save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert": {
+      "main": [
+        [
+          {
+            "node": "Extract_URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_sources": {
+      "main": [
+        [
+          {
+            "node": "Random_sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random_sources": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save": {
+      "main": [
+        [
+          {
+            "node": "Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post_web": {
+      "main": [
+        [
+          {
+            "node": "get_title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_title": {
+      "main": [
+        [
+          {
+            "node": "Create a card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule_FB": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calc_time": {
+      "main": [
+        [
+          {
+            "node": "Schedule_FB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_FB_jobs": {
+      "main": [
+        [
+          {
+            "node": "Calc_time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_URL": {
+      "main": [
+        [
+          {
+            "node": "post_web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Random_sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Get_sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete_save": {
+      "main": [
+        [
+          {
+            "node": "Get_FB_jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d0257784-19a3-4701-8cc6-567074e3502b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "93f617569fc779da6d205b015e99c3cfbc827dbbef38a8fa0f42c4e26de2e09c"
+  },
+  "id": "BApo87XD2dHpO4m6",
+  "tags": []
+}
