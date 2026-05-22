@@ -24,11 +24,13 @@
       "type": "n8n-nodes-base.trello",
       "typeVersion": 1,
       "position": [
-        1984,
+        2160,
         0
       ],
       "id": "5630c527-8a03-42df-999b-4fafe0c35eed",
       "name": "Create a card",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
       "credentials": {
         "trelloApi": {
           "id": "3XuMzM0VwTAlfQhA",
@@ -65,7 +67,9 @@
         0
       ],
       "id": "6e4d17c9-de6b-43a7-a552-37342db75f4b",
-      "name": "Convert"
+      "name": "Convert",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -151,7 +155,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1568,
+        1808,
         0
       ],
       "id": "eb65918d-6d89-4ea3-9aed-19e3f73e78a6",
@@ -165,7 +169,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1776,
+        2000,
         0
       ],
       "id": "fb55077b-2018-4a78-b76c-e13bc38f8472",
@@ -173,13 +177,13 @@
     },
     {
       "parameters": {
-        "amount": 15,
+        "amount": 8,
         "unit": "minutes"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2400,
+        2560,
         0
       ],
       "id": "42f64824-7d9e-4adf-8ed1-a765a5f6e410",
@@ -194,34 +198,12 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        32,
+        -224
       ],
       "id": "f24a881c-f2dd-4b2e-9cfe-884bb84a7906",
       "name": "Webhook",
       "webhookId": "a9c7de9d-b75e-4b1a-8239-03e09178773f"
-    },
-    {
-      "parameters": {
-        "chatId": "7922880027",
-        "text": "✅ Đã đăng xong 4 bài lên Techrum (cách nhau 15 phút/bài)",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        832,
-        -192
-      ],
-      "id": "dcec4f3d-3f28-40aa-a120-be5e069c9035",
-      "name": "Send a text message",
-      "webhookId": "1a786052-5006-4393-aa6f-5dc76615e9d9",
-      "credentials": {
-        "telegramApi": {
-          "id": "VudaawHskwkCrfaP",
-          "name": "Telegram account"
-        }
-      }
     },
     {
       "parameters": {
@@ -232,7 +214,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        2192,
+        2352,
         0
       ],
       "id": "f778ec6c-8af3-4692-901f-38c5f7c85b21",
@@ -270,6 +252,49 @@
       ],
       "id": "a9a33a99-bb65-4ef0-9513-5fa51c41a1a3",
       "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/ask-shutdown",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"status\": \"done\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        816,
+        -176
+      ],
+      "id": "defaacac-87b3-42cf-855c-0bad2829f9e1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const bbcode = $json.data;\nconst match = bbcode.match(/\\[IMG\\](https?:\\/\\/[^\\[]+)\\[\\/IMG\\]/i);\nconst imageUrl = match ? match[1] : null;\n\nreturn {\n  data: $json.data,\n  title_short: $json.title_short,\n  highlights: $json.highlights,\n  image_url: imageUrl,\n  forum_id: $json.forum_id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        0
+      ],
+      "id": "7186d0f5-2b4e-4131-a501-604a1501fc7b",
+      "name": "Extract_URL"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        32,
+        0
+      ],
+      "id": "f4975942-6212-4cb8-9dbe-bec7432f8597",
+      "name": "When clicking ‘Execute workflow’"
     }
   ],
   "pinData": {},
@@ -278,7 +303,7 @@
       "main": [
         [
           {
-            "node": "Send a text message",
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -307,7 +332,7 @@
       "main": [
         [
           {
-            "node": "post_web",
+            "node": "Extract_URL",
             "type": "main",
             "index": 0
           }
@@ -393,13 +418,7 @@
     },
     "Webhook": {
       "main": [
-        [
-          {
-            "node": "Get_sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Delete_save": {
@@ -430,6 +449,28 @@
           }
         ]
       ]
+    },
+    "Extract_URL": {
+      "main": [
+        [
+          {
+            "node": "post_web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get_sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -438,7 +479,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "d160b455-ad51-47c9-a738-2cf07c6131c9",
+  "versionId": "963ef04f-b8b5-4425-ac95-70aff4df39d9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "93f617569fc779da6d205b015e99c3cfbc827dbbef38a8fa0f42c4e26de2e09c"

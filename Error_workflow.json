@@ -1,0 +1,148 @@
+{
+  "name": "Error_workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "7922880027",
+        "message": "=❌ Workflow bị lỗi!\n\n📌 Node: {{ $json.execution.lastNodeExecuted }}\n💬 Lỗi: {{ $json.execution.error.message }}\n🕐 Lúc: {{ $now.toFormat('HH:mm:ss dd/MM/yyyy') }}\n\nBạn muốn làm gì?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ Tắt máy",
+            "disapproveLabel": "❌ Ngừng n8n"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "7ee87bad-206f-4413-b450-c3248d309e89",
+      "name": "Send message and wait for response",
+      "webhookId": "5ceeacca-fc2f-41b7-a455-37bb0e7e9504",
+      "credentials": {
+        "telegramApi": {
+          "id": "VudaawHskwkCrfaP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "e3574526-77a0-4b2e-9228-b121887278f4",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cdc467ee-6630-4c45-a035-faa50c228b16",
+              "leftValue": "=={{ $json.data }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        0
+      ],
+      "id": "d42c466e-4a1a-4332-9104-a00ac3ffb961",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3001/shutdown",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        -16
+      ],
+      "id": "c17581ba-d8ea-4085-8f10-648805f0dc5d",
+      "name": "Shutdown"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Shutdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shutdown": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fc2a221d-8598-4bb5-b7bc-da50f7c8fe86",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "93f617569fc779da6d205b015e99c3cfbc827dbbef38a8fa0f42c4e26de2e09c"
+  },
+  "id": "VFlarTTCE7UsaEQa",
+  "tags": []
+}

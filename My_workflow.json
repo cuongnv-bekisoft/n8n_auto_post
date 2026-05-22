@@ -1,5 +1,5 @@
 {
-  "name": "My workflow",
+  "name": "My_workflow",
   "nodes": [
     {
       "parameters": {
@@ -29,6 +29,8 @@
       ],
       "id": "b2a051ef-6e70-49f8-9622-245b0696f4b3",
       "name": "Create a card",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
       "credentials": {
         "trelloApi": {
           "id": "3XuMzM0VwTAlfQhA",
@@ -65,7 +67,9 @@
         0
       ],
       "id": "62dad29d-4564-4c03-938c-6a562357235a",
-      "name": "Convert"
+      "name": "Convert",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -173,62 +177,18 @@
     },
     {
       "parameters": {
-        "amount": 15,
+        "amount": 8,
         "unit": "minutes"
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        3232,
+        3248,
         0
       ],
       "id": "d03e9b19-555f-4d9e-86db-1b4eaff93b82",
       "name": "Wait",
       "webhookId": "86f4703f-ecbf-4a62-9331-df6517c92685"
-    },
-    {
-      "parameters": {
-        "operation": "sendAndWait",
-        "chatId": "7922880027",
-        "message": "✅ Hệ thống đã xử lý xong 4 bài!\n\n📝 Đã đăng lên Techrum (cách nhau 15 phút/bài)\n📅 Lịch Facebook đã được xếp hàng\n\nBạn có muốn tắt máy không?",
-        "approvalOptions": {
-          "values": {
-            "approvalType": "double",
-            "approveLabel": "✅ Tắt máy",
-            "disapproveLabel": "❌ Không"
-          }
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        1056,
-        -192
-      ],
-      "id": "4a6be292-e903-4bb8-8a48-57871c723342",
-      "name": "Send message and wait for response",
-      "webhookId": "556d0a3d-26b6-4bf5-a45a-168713a1d25c",
-      "credentials": {
-        "telegramApi": {
-          "id": "VudaawHskwkCrfaP",
-          "name": "Telegram account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:3001/shutdown",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        1472,
-        -192
-      ],
-      "id": "53a60f0c-6da7-4818-bcad-8dde9b47c5de",
-      "name": "HTTP Request"
     },
     {
       "parameters": {
@@ -243,7 +203,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        3040,
+        3056,
         0
       ],
       "id": "384bdc4c-6049-43fc-81fe-9ba5e9130118",
@@ -251,7 +211,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const loopIndex = $runIndex || 0;\n\nconst allJobs = $('Get_FB_jobs').first().json;\nconst pendingJobs = (allJobs.jobs || []).filter(j => j.status !== 'commented');\n\n// Tính ngày mai VN\nconst now = new Date();\nconst vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);\nconst tomorrowVN = new Date(vnNow);\ntomorrowVN.setUTCDate(tomorrowVN.getUTCDate() + 1);\ntomorrowVN.setUTCHours(0, 0, 0, 0);\n\n// Các slot 30 phút từ 9h30 đến 13h\nconst slots = [\n  { h: 9,  m: 30 },\n  { h: 10, m: 0  },\n  { h: 10, m: 30 },\n  { h: 11, m: 0  },\n  { h: 11, m: 30 },\n  { h: 12, m: 0  },\n  { h: 12, m: 30 },\n  { h: 13, m: 0  },\n];\n\nlet chosenSlot = null;\n\nfor (const slot of slots) {\n  const candidate = new Date(tomorrowVN);\n  candidate.setUTCHours(slot.h - 7, slot.m, 0, 0);\n  const candidateTs = Math.floor(candidate.getTime() / 1000);\n\n  // Check trùng trong vòng 20 phút\n  const conflict = pendingJobs.some(j =>\n    Math.abs(j.scheduled_ts - candidateTs) < 1200\n  );\n\n  if (!conflict) {\n    chosenSlot = slot;\n    break;\n  }\n}\n\n// Fallback nếu hết slot\nif (!chosenSlot) chosenSlot = slots[loopIndex % slots.length];\n\n// Build ISO string đúng giờ VN\nconst scheduled = new Date(tomorrowVN);\nscheduled.setUTCHours(chosenSlot.h - 7, chosenSlot.m, 0, 0);\n\nconst pad = n => String(n).padStart(2, '0');\nconst vnDate = new Date(scheduled.getTime() + 7 * 60 * 60 * 1000);\nconst isoTime = `${vnDate.getUTCFullYear()}-${pad(vnDate.getUTCMonth()+1)}-${pad(vnDate.getUTCDate())}T${pad(chosenSlot.h)}:${pad(chosenSlot.m)}:00+07:00`;\n\nreturn {\n  scheduled_time: isoTime,\n  loop_index: loopIndex,\n  chosen_hour: `${chosenSlot.h}:${pad(chosenSlot.m)}`\n};"
+        "jsCode": "const loopIndex = $runIndex || 0;\n\nconst allJobs = $('Get_FB_jobs').first().json;\n\n// Gom tất cả jobs từ grouped thành 1 mảng phẳng\nconst grouped = allJobs.grouped || {};\nconst allJobsList = Object.values(grouped).flat();\n\n// Chỉ lấy pending của ngày mai để check trùng\nconst pendingJobs = allJobsList.filter(j => j.status === 'pending');\n\n// Tính ngày mai VN\nconst now = new Date();\nconst vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);\nconst tomorrowVN = new Date(vnNow);\ntomorrowVN.setUTCDate(tomorrowVN.getUTCDate() + 1);\ntomorrowVN.setUTCHours(0, 0, 0, 0);\n\n// Các slot 30 phút từ 9h30 đến 13h\nconst slots = [\n  { h: 9,  m: 30 },\n  { h: 10, m: 30 },\n  { h: 11, m: 45 },\n  { h: 13, m: 0  },\n  { h: 15, m: 0  },\n  { h: 17, m: 0  },\n  { h: 19, m: 0  },\n  { h: 20, m: 0  },\n  { h: 21, m: 0  },\n];\n\n\nlet chosenSlot = null;\n\nfor (const slot of slots) {\n  const candidate = new Date(tomorrowVN);\n  candidate.setUTCHours(slot.h - 7, slot.m, 0, 0);\n  const candidateTs = Math.floor(candidate.getTime() / 1000);\n\n  // Check trùng trong vòng 20 phút\n  const conflict = pendingJobs.some(j =>\n    Math.abs(j.scheduled_ts - candidateTs) < 1200\n  );\n\n  if (!conflict) {\n    chosenSlot = slot;\n    break;\n  }\n}\n\n// Fallback nếu hết slot\nif (!chosenSlot) chosenSlot = slots[loopIndex % slots.length];\n\n// Build ISO string đúng giờ VN\nconst scheduled = new Date(tomorrowVN);\nscheduled.setUTCHours(chosenSlot.h - 7, chosenSlot.m, 0, 0);\n\nconst pad = n => String(n).padStart(2, '0');\nconst vnDate = new Date(scheduled.getTime() + 7 * 60 * 60 * 1000);\nconst isoTime = `${vnDate.getUTCFullYear()}-${pad(vnDate.getUTCMonth()+1)}-${pad(vnDate.getUTCDate())}T${pad(chosenSlot.h)}:${pad(chosenSlot.m)}:00+07:00`;\n\nreturn {\n  scheduled_time: isoTime,\n  loop_index: loopIndex,\n  chosen_hour: `${chosenSlot.h}:${pad(chosenSlot.m)}`\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -270,7 +230,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        32,
+        16,
         0
       ],
       "id": "17847662-7f5e-4b36-8a2a-34d2e355dc10",
@@ -352,6 +312,24 @@
       ],
       "id": "55d83bc8-81ae-4ab1-8f03-0f6503959325",
       "name": "Delete_save"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/ask-shutdown",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"status\": \"done\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        -240
+      ],
+      "id": "53a60f0c-6da7-4818-bcad-8dde9b47c5de",
+      "name": "Shutdown"
     }
   ],
   "pinData": {},
@@ -360,7 +338,7 @@
       "main": [
         [
           {
-            "node": "Send message and wait for response",
+            "node": "Shutdown",
             "type": "main",
             "index": 0
           }
@@ -473,17 +451,6 @@
         ]
       ]
     },
-    "Send message and wait for response": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Schedule_FB": {
       "main": [
         [
@@ -573,9 +540,12 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "VFlarTTCE7UsaEQa",
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "d0257784-19a3-4701-8cc6-567074e3502b",
+  "versionId": "62f2fa37-b69a-4eb9-a1b9-0bf24e24c582",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "93f617569fc779da6d205b015e99c3cfbc827dbbef38a8fa0f42c4e26de2e09c"
