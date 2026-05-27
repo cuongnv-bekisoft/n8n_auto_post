@@ -1,5 +1,8 @@
 @echo off
 
+:: Khởi động n8n ở background
+start "n8n" cmd /k "yarn n8n"
+
 :: Chờ n8n khởi động xong (30 giây)
 timeout /t 30 /nobreak
 
